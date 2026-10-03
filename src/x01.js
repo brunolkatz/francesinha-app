@@ -1,9 +1,11 @@
-// 501: straight in, double out. Each visit (up to three darts) is entered
-// as one total and subtracted from the player's remaining score.
+// 501: straight in, double out, between two sides. A side is one player
+// (singles) or a pair who take alternate visits and share one score. Each
+// visit (up to three darts) is entered as one total.
 
 export const START = 501
 export const MAX_VISIT = 180
-const HISTORY_LIMIT = 60
+export const FORMATS = ['singles', 'pairs']
+const NAME_MAX = 14
 
 // Totals no three darts can make.
 const IMPOSSIBLE_VISITS = new Set([163, 166, 169, 172, 173, 175, 176, 178, 179])
@@ -11,17 +13,20 @@ const IMPOSSIBLE_VISITS = new Set([163, 166, 169, 172, 173, 175, 176, 178, 179])
 const IMPOSSIBLE_CHECKOUTS = new Set([159, 162, 163, 165, 166, 168, 169])
 const MAX_CHECKOUT = 170
 
-const freshPlayer = (legs = 0) => ({ remaining: START, visits: [], legs })
+// names[side][player]. Numbered in throwing order for pairs: 1, 2, 3, 4.
+export const defaultName = (side, player) => `Player ${player * 2 + side + 1}`
 
-export function createX01(ids) {
+export function createX01() {
   return {
-    byId: Object.fromEntries(ids.map((id) => [id, freshPlayer()])),
-    currentId: ids[0],
-    // Legs played so far; the throw-first rotates with it.
+    format: FORMATS[0],
+    names: [0, 1].map((side) => [0, 1].map((player) => defaultName(side, player))),
+    // Legs already banked; the leg in progress is counted from its visits.
+    legs: [0, 0],
+    // Legs completed so far. The throw-first alternates with it.
     leg: 0,
-    winnerId: null,
+    // Visits of the leg in progress, in order: { side, player, score, bust }.
+    visits: [],
     winModalOpen: false,
-    history: [],
   }
 }
 
@@ -43,100 +48,107 @@ export function visitError(remaining, value) {
 export const isBust = (remaining, value) =>
   remaining - value < 0 || remaining - value === 1
 
-export function average(player) {
-  if (player.visits.length === 0) return 0
-  const total = player.visits.reduce((sum, v) => sum + v.score, 0)
-  return total / player.visits.length
+const sideVisits = (state, side) => state.visits.filter((v) => v.side === side)
+
+export const remainingOf = (state, side) =>
+  START - sideVisits(state, side).reduce((sum, v) => sum + v.score, 0)
+
+// The side that has checked out this leg, or null while it is still open.
+export function winnerOf(state) {
+  const side = [0, 1].find((s) => remainingOf(state, s) === 0)
+  return side ?? null
 }
 
-const withHistory = (state) => ({
-  ...state,
-  history: [
-    ...state.history,
-    { byId: state.byId, currentId: state.currentId, winnerId: state.winnerId },
-  ].slice(-HISTORY_LIMIT),
-})
+// Legs won including the one just finished, before it is banked.
+export const legsOf = (state, side) =>
+  state.legs[side] + (winnerOf(state) === side ? 1 : 0)
 
-const nextId = (ids, id) => ids[(ids.indexOf(id) + 1) % ids.length]
+export function averageOf(state, side) {
+  const visits = sideVisits(state, side)
+  if (visits.length === 0) return 0
+  return visits.reduce((sum, v) => sum + v.score, 0) / visits.length
+}
 
-// Records a visit for the current player and passes the turn. A bust
-// scores nothing and leaves the remaining score where the visit started.
-function visit(state, ids, value, bust) {
-  if (state.winnerId !== null) return state
-  const player = state.byId[state.currentId]
-  if (!player) return state
-  if (!bust && visitError(player.remaining, value)) return state
+// Who throws next. Sides alternate every visit; in pairs the two partners
+// alternate every time their side comes up. Who starts rotates each leg.
+export function throwerOf(state) {
+  const n = state.visits.length
+  return {
+    side: (state.leg + n) % 2,
+    player:
+      state.format === 'pairs'
+        ? (Math.floor(n / 2) + Math.floor(state.leg / 2)) % 2
+        : 0,
+  }
+}
 
-  const busted = bust || isBust(player.remaining, value)
+export const playerName = (state, side, player) => state.names[side][player]
+
+export const sideName = (state, side) =>
+  state.format === 'pairs' ? state.names[side].join(' & ') : state.names[side][0]
+
+// The leg's visits with the score each one left, oldest first.
+export function visitLog(state) {
+  const left = [START, START]
+  return state.visits.map((v, index) => {
+    left[v.side] -= v.score
+    return { ...v, number: index + 1, remaining: left[v.side] }
+  })
+}
+
+// A bust scores nothing, so the remaining score stays where the visit started.
+function visit(state, value, bust) {
+  if (winnerOf(state) !== null) return state
+  const { side, player } = throwerOf(state)
+  const remaining = remainingOf(state, side)
+  if (!bust && visitError(remaining, value)) return state
+  const busted = bust || isBust(remaining, value)
   const score = busted ? 0 : value
-  const remaining = player.remaining - score
-  const won = remaining === 0
-  const next = withHistory(state)
-  next.byId = {
-    ...state.byId,
-    [state.currentId]: {
-      ...player,
-      remaining,
-      visits: [...player.visits, { score, bust: busted }],
-      legs: player.legs + (won ? 1 : 0),
-    },
+  return {
+    ...state,
+    visits: [...state.visits, { side, player, score, bust: busted }],
+    winModalOpen: remaining - score === 0,
   }
-  if (won) {
-    next.winnerId = state.currentId
-    next.winModalOpen = true
-  } else {
-    next.currentId = nextId(ids, state.currentId)
-  }
-  return next
 }
 
-// Keeps the match in step with the table: seats new players at 501, drops
-// removed ones, and hands the turn on if the player throwing just left.
-export function reconcile(state, ids, previousIds = ids) {
-  const byId = Object.fromEntries(
-    ids.map((id) => [id, state.byId[id] ?? freshPlayer()]),
-  )
-  let { currentId, winnerId } = state
-  if (!ids.includes(currentId)) {
-    const from = previousIds.indexOf(currentId)
-    currentId = previousIds.slice(from + 1).find((id) => ids.includes(id)) ?? ids[0]
-  }
-  if (!ids.includes(winnerId)) winnerId = null
-  return { ...state, byId, currentId, winnerId, winModalOpen: state.winModalOpen && winnerId !== null }
-}
-
-export function x01Reducer(state, action, ids) {
+export function x01Reducer(state, action) {
   switch (action.type) {
     case 'x01/score':
-      return visit(state, ids, action.value, false)
+      return visit(state, action.value, false)
     case 'x01/bust':
-      return visit(state, ids, 0, true)
-    case 'x01/undo': {
-      const previous = state.history.at(-1)
-      if (!previous) return state
-      return reconcile(
-        { ...state, ...previous, winModalOpen: false, history: state.history.slice(0, -1) },
-        ids,
-      )
-    }
+      return visit(state, 0, true)
+    case 'x01/undo':
+      if (state.visits.length === 0) return state
+      return { ...state, visits: state.visits.slice(0, -1), winModalOpen: false }
     case 'x01/nextLeg': {
-      const leg = state.leg + 1
+      const winner = winnerOf(state)
+      if (winner === null) return state
       return {
         ...state,
-        byId: Object.fromEntries(
-          ids.map((id) => [id, freshPlayer(state.byId[id]?.legs)]),
-        ),
-        currentId: ids[leg % ids.length],
-        leg,
-        winnerId: null,
+        legs: state.legs.map((n, side) => n + (side === winner ? 1 : 0)),
+        leg: state.leg + 1,
+        visits: [],
         winModalOpen: false,
-        history: [],
       }
     }
     case 'x01/reset':
-      return createX01(ids)
+      return { ...createX01(), format: state.format, names: state.names }
     case 'x01/dismissWin':
       return { ...state, winModalOpen: false }
+    case 'x01/setFormat':
+      if (!FORMATS.includes(action.format) || action.format === state.format) return state
+      return { ...state, format: action.format }
+    case 'x01/rename': {
+      const { side, player } = action
+      if (state.names[side]?.[player] === undefined) return state
+      const name = action.name.trim().slice(0, NAME_MAX) || defaultName(side, player)
+      return {
+        ...state,
+        names: state.names.map((pair, s) =>
+          pair.map((old, p) => (s === side && p === player ? name : old)),
+        ),
+      }
+    }
     default:
       return state
   }

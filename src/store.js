@@ -1,16 +1,13 @@
-// App state: one shared table of players, and one game each of
-// Francesinha and 501 that both keep their progress while you switch.
+// App state: a game of Francesinha and a game of 501, each with its own
+// players, that both keep their progress while you switch between them.
 
 import { MAX_PLAYERS, ROWS, createGame, reducer as francesinhaReducer } from './game.js'
-import { createX01, reconcile, x01Reducer } from './x01.js'
+import { FORMATS, MAX_VISIT, createX01, remainingOf, x01Reducer } from './x01.js'
 
 export const MODES = ['francesinha', '501']
 
-const idsOf = (game) => game.players.map((p) => p.id)
-
 export function createState() {
-  const fr = createGame()
-  return { mode: MODES[0], fr, x01: createX01(idsOf(fr)) }
+  return { mode: MODES[0], fr: createGame(), x01: createX01() }
 }
 
 export function reducer(state, action) {
@@ -18,33 +15,21 @@ export function reducer(state, action) {
     return MODES.includes(action.mode) ? { ...state, mode: action.mode } : state
   }
   if (action.type.startsWith('x01/')) {
-    const x01 = x01Reducer(state.x01, action, idsOf(state.fr))
+    const x01 = x01Reducer(state.x01, action)
     return x01 === state.x01 ? state : { ...state, x01 }
   }
-
   const fr = francesinhaReducer(state.fr, action)
-  if (fr === state.fr) return state
-  // A fresh table reuses player ids, so 501 must start over with it.
-  if (action.type === 'newGame') return { ...state, fr, x01: createX01(idsOf(fr)) }
-  const ids = idsOf(fr)
-  const previousIds = idsOf(state.fr)
-  const seatsChanged =
-    ids.length !== previousIds.length || ids.some((id, i) => id !== previousIds[i])
-  return {
-    ...state,
-    fr,
-    x01: seatsChanged ? reconcile(state.x01, ids, previousIds) : state.x01,
-  }
+  return fr === state.fr ? state : { ...state, fr }
 }
 
-const STORAGE_KEY = 'francesinha.state.v1'
+const STORAGE_KEY = 'francesinha.state.v2'
 
-const isCount = (n, max) => Number.isInteger(n) && n >= 0 && n <= max
+const isCount = (n, max = Infinity) => Number.isInteger(n) && n >= 0 && n <= max
+const isName = (name) => typeof name === 'string' && name.trim() !== ''
+const isSide = (n) => n === 0 || n === 1
 
-function isValid(state) {
-  const { mode, fr, x01 } = state ?? {}
-  if (!MODES.includes(mode) || !fr || !x01) return false
-  const { players } = fr
+function isValidFrancesinha(fr) {
+  const players = fr?.players
   if (!Array.isArray(players) || players.length < 1 || players.length > MAX_PLAYERS) {
     return false
   }
@@ -52,31 +37,37 @@ function isValid(state) {
   for (const p of players) {
     if (!Number.isInteger(p?.id) || ids.has(p.id)) return false
     ids.add(p.id)
-    if (typeof p.name !== 'string' || !p.name.trim()) return false
+    if (!isName(p.name)) return false
     if (!Array.isArray(p.marks) || p.marks.length !== ROWS.length) return false
     if (!p.marks.every((m) => isCount(m, 3))) return false
   }
   if (!Number.isInteger(fr.nextId) || players.some((p) => p.id >= fr.nextId)) return false
-  if (!Array.isArray(fr.history) || !Array.isArray(x01.history)) return false
-  if (fr.winner !== null && !players[fr.winner]) return false
-  if (!ids.has(x01.currentId) || !Number.isInteger(x01.leg)) return false
-  if (x01.winnerId !== null && !ids.has(x01.winnerId)) return false
-  return players.every((p) => {
-    const seat = x01.byId?.[p.id]
-    return (
-      seat &&
-      isCount(seat.remaining, 501) &&
-      Number.isInteger(seat.legs) &&
-      Array.isArray(seat.visits)
-    )
-  })
+  if (!Array.isArray(fr.history)) return false
+  return fr.winner === null || Boolean(players[fr.winner])
 }
 
-// Restores the saved table, or starts a fresh one if nothing usable is stored.
+function isValidX01(x01) {
+  if (!FORMATS.includes(x01?.format)) return false
+  const { names, legs, visits } = x01
+  if (!Array.isArray(names) || names.length !== 2) return false
+  if (!names.every((pair) => Array.isArray(pair) && pair.length === 2 && pair.every(isName))) {
+    return false
+  }
+  if (!Array.isArray(legs) || legs.length !== 2 || !legs.every((n) => isCount(n))) return false
+  if (!isCount(x01.leg) || !Array.isArray(visits)) return false
+  const visitsOk = visits.every(
+    (v) => isSide(v?.side) && isSide(v.player) && isCount(v.score, MAX_VISIT) && typeof v.bust === 'boolean',
+  )
+  return visitsOk && [0, 1].every((side) => remainingOf(x01, side) >= 0)
+}
+
+// Restores the saved games, or starts fresh if nothing usable is stored.
 export function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-    if (isValid(saved)) return saved
+    if (MODES.includes(saved?.mode) && isValidFrancesinha(saved.fr) && isValidX01(saved.x01)) {
+      return saved
+    }
   } catch {
     // Storage unavailable or corrupt: fall through to a fresh table.
   }

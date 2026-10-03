@@ -1,68 +1,126 @@
 import { useEffect, useState } from 'react'
 import PlayerName from './PlayerName.jsx'
-import { RemoveConfirm, RemoveCross, useArmed } from './RemoveButton.jsx'
-import { MAX_VISIT, average, isBust, visitError } from '../x01.js'
+import {
+  MAX_VISIT,
+  averageOf,
+  isBust,
+  legsOf,
+  playerName,
+  remainingOf,
+  sideName,
+  throwerOf,
+  visitError,
+  visitLog,
+  winnerOf,
+} from '../x01.js'
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+const SIDES = [0, 1]
 
-function PlayerCard({ player, seat, active, won, canRemove, onRename, onRemove }) {
-  const [armed, arm] = useArmed()
-  const last = seat.visits.at(-1)
+function SideCard({ x01, side, thrower, winner, onRename }) {
+  const active = winner === null && thrower.side === side
+  const lit = active || winner === side
+  const last = x01.visits.findLast((v) => v.side === side)
+  const players = x01.format === 'pairs' ? [0, 1] : [0]
 
   return (
     <div
-      className={`felt flex min-h-0 min-w-[6.5rem] flex-1 items-center gap-2 rounded-md px-2 py-1.5 portrait:flex-col portrait:justify-center landscape:px-4 ${
-        active || won ? 'felt-active' : ''
+      className={`felt flex min-h-0 min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 portrait:flex-col portrait:justify-center landscape:px-4 ${
+        lit ? 'felt-active' : ''
       }`}
       aria-current={active ? 'true' : undefined}
     >
       <div className="flex min-w-0 flex-col gap-0.5 portrait:w-full portrait:items-center landscape:flex-1">
-        <PlayerName
-          name={player.name}
-          active={active || won}
-          onRename={onRename}
-          className="text-base tracking-wide portrait:text-center sm:text-xl landscape:text-left"
-        />
+        {players.map((player) => (
+          <PlayerName
+            key={player}
+            name={playerName(x01, side, player)}
+            // In a pair, only the partner at the oche lights up.
+            active={winner === side || (active && thrower.player === player)}
+            onRename={(name) => onRename(side, player, name)}
+            className="text-lg tracking-wide portrait:text-center sm:text-2xl landscape:text-left"
+          />
+        ))}
         <p className="w-full truncate px-1 text-sm tracking-wider text-cream/55 portrait:text-center sm:text-base">
           {last ? (last.bust ? 'Bust' : `Last ${last.score}`) : 'No visits'} · Avg{' '}
-          {average(seat).toFixed(1)} · Legs {seat.legs}
+          {averageOf(x01, side).toFixed(1)}
         </p>
       </div>
 
       <span
-        className={`text-5xl font-extrabold tabular-nums leading-none sm:text-6xl landscape:lg:text-7xl ${
-          active || won ? 'text-brass' : 'text-cream/80'
+        className={`text-6xl font-extrabold tabular-nums leading-none sm:text-7xl landscape:lg:text-8xl ${
+          lit ? 'text-brass' : 'text-cream/80'
         }`}
-        aria-label={`${player.name}: ${seat.remaining} remaining`}
+        aria-label={`${sideName(x01, side)}: ${remainingOf(x01, side)} remaining`}
       >
-        {seat.remaining}
+        {remainingOf(x01, side)}
       </span>
-
-      {canRemove &&
-        (armed ? (
-          <RemoveConfirm onRemove={onRemove} />
-        ) : (
-          <RemoveCross name={player.name} onArm={arm} />
-        ))}
     </div>
   )
 }
 
-export default function X01Board({
-  players,
-  x01,
-  onScore,
-  onBust,
-  onNextLeg,
-  onRename,
-  onRemove,
-}) {
+// "Player 1 → 1 vs 0 ← Player 2", plus which leg is being played.
+function LegScore({ x01 }) {
+  return (
+    <div className="rail flex items-center gap-2 rounded-md px-3 py-2 text-cream" aria-label="Legs score">
+      <span className="min-w-0 flex-1 truncate text-right text-lg font-bold tracking-wide sm:text-xl">
+        {sideName(x01, 0)}
+      </span>
+      <span className="text-copper" aria-hidden="true">→</span>
+      <span className="text-3xl font-extrabold tabular-nums text-brass sm:text-4xl">{legsOf(x01, 0)}</span>
+      <span className="px-1 text-base uppercase tracking-widest text-cream/60">vs</span>
+      <span className="text-3xl font-extrabold tabular-nums text-brass sm:text-4xl">{legsOf(x01, 1)}</span>
+      <span className="text-copper" aria-hidden="true">←</span>
+      <span className="min-w-0 flex-1 truncate text-lg font-bold tracking-wide sm:text-xl">
+        {sideName(x01, 1)}
+      </span>
+    </div>
+  )
+}
+
+function VisitHistory({ x01 }) {
+  const log = visitLog(x01).reverse()
+  return (
+    <div className="felt flex h-32 shrink-0 flex-col rounded-xl sm:h-36">
+      <p className="flex justify-between border-b border-white/10 px-3 py-1 text-sm font-semibold uppercase tracking-widest text-copper">
+        <span>Leg {x01.leg + 1} history</span>
+        <span>
+          {log.length} {log.length === 1 ? 'visit' : 'visits'}
+        </span>
+      </p>
+      {log.length === 0 ? (
+        <p className="flex flex-1 items-center justify-center text-base tracking-wider text-cream/40">
+          No visits yet
+        </p>
+      ) : (
+        <ol className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3" aria-label="Visit history, newest first">
+          {log.map((v) => (
+            <li
+              key={v.number}
+              className="grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_5.5rem] items-center gap-2 border-b border-white/5 py-1 text-lg tabular-nums last:border-0"
+            >
+              <span className="text-cream/40">{v.number}</span>
+              <span className="truncate font-semibold tracking-wide">{playerName(x01, v.side, v.player)}</span>
+              <span className={`text-right font-bold ${v.bust ? 'text-[#e8796b]' : 'text-brass'}`}>
+                {v.bust ? 'Bust' : v.score}
+              </span>
+              <span className="text-right text-cream/60">{v.remaining} left</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}
+
+export default function X01Board({ x01, onScore, onBust, onNextLeg, onRename }) {
   const [entry, setEntry] = useState('')
   const [error, setError] = useState(null)
 
-  const over = x01.winnerId !== null
-  const current = players.find((p) => p.id === x01.currentId)
-  const remaining = x01.byId[x01.currentId].remaining
+  const winner = winnerOf(x01)
+  const over = winner !== null
+  const thrower = throwerOf(x01)
+  const remaining = remainingOf(x01, thrower.side)
 
   const type = (digit) => {
     setError(null)
@@ -110,41 +168,51 @@ export default function X01Board({
   })
 
   const preview = entry !== '' && !isBust(remaining, Number(entry)) ? remaining - Number(entry) : null
+  const hint =
+    error ??
+    (over
+      ? 'Start the next leg or reset the match'
+      : entry === ''
+        ? 'Enter the visit total · finish on a double'
+        : preview === null
+          ? 'Bust: the score stays where it was'
+          : preview === 0
+            ? 'Checkout'
+            : `Leaves ${preview}`)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 landscape:flex-row">
-      <div className="wood flex min-h-0 gap-1.5 overflow-auto rounded-xl p-2.5 portrait:h-[30%] portrait:min-h-36 landscape:w-[46%] landscape:flex-col">
-        {players.map((player, index) => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            seat={x01.byId[player.id]}
-            active={!over && player.id === x01.currentId}
-            won={player.id === x01.winnerId}
-            canRemove={players.length > 1}
-            onRename={(name) => onRename(index, name)}
-            onRemove={() => onRemove(index)}
-          />
-        ))}
+    <div className="flex min-h-full flex-col gap-3 landscape:h-full landscape:min-h-0 landscape:flex-row">
+      <div className="wood flex min-h-0 flex-col gap-1.5 rounded-xl p-2.5 portrait:h-[30dvh] portrait:min-h-56 portrait:shrink-0 landscape:w-[46%]">
+        <LegScore x01={x01} />
+        <div className="flex min-h-0 flex-1 gap-1.5 landscape:flex-col">
+          {SIDES.map((side) => (
+            <SideCard
+              key={side}
+              x01={x01}
+              side={side}
+              thrower={thrower}
+              winner={winner}
+              onRename={onRename}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2">
+        <VisitHistory x01={x01} />
+
         <div className="flex items-center justify-between gap-3 rounded-xl bg-black/30 px-4 py-2">
           <div className="min-w-0">
             <p className="truncate text-2xl font-bold tracking-widest text-brass" aria-live="polite">
-              {over ? `${current.name} checked out` : `${current.name} to throw`}
+              {over
+                ? `${sideName(x01, winner)} checked out`
+                : `${playerName(x01, thrower.side, thrower.player)} to throw`}
             </p>
-            <p className={`text-base tracking-wider ${error ? 'text-[#e8796b]' : 'text-cream/55'}`} role={error ? 'alert' : undefined}>
-              {error ??
-                (over
-                  ? 'Start the next leg or reset the match'
-                  : entry === ''
-                    ? 'Enter the visit total · finish on a double'
-                    : preview === null
-                      ? 'Bust: the score stays where it was'
-                      : preview === 0
-                        ? 'Checkout'
-                        : `Leaves ${preview}`)}
+            <p
+              className={`text-base tracking-wider ${error ? 'text-[#e8796b]' : 'text-cream/55'}`}
+              role={error ? 'alert' : undefined}
+            >
+              {hint}
             </p>
           </div>
           <output className="min-w-24 rounded-lg bg-felt px-3 py-1 text-right text-5xl font-extrabold tabular-nums text-cream">
@@ -157,33 +225,32 @@ export default function X01Board({
             Next leg
           </button>
         ) : (
-          <div className="grid min-h-0 flex-1 grid-cols-3 grid-rows-4 gap-2">
-            {KEYS.map((key) => (
-              <button key={key} type="button" className="btn keypad-key" onClick={() => type(key)}>
-                {key}
+          <>
+            <div className="grid min-h-0 flex-1 grid-cols-3 grid-rows-4 gap-2">
+              {KEYS.map((key) => (
+                <button key={key} type="button" className="btn keypad-key" onClick={() => type(key)}>
+                  {key}
+                </button>
+              ))}
+              <button type="button" className="btn keypad-key" onClick={erase} aria-label="Delete last digit">
+                ⌫
               </button>
-            ))}
-            <button type="button" className="btn keypad-key" onClick={erase} aria-label="Delete last digit">
-              ⌫
+              <button type="button" className="btn keypad-key" onClick={() => type('0')}>
+                0
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary keypad-key"
+                onClick={submit}
+                disabled={entry === ''}
+              >
+                Enter
+              </button>
+            </div>
+            <button type="button" className="btn btn-danger min-h-14 text-xl" onClick={bust}>
+              Bust
             </button>
-            <button type="button" className="btn keypad-key" onClick={() => type('0')}>
-              0
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary keypad-key"
-              onClick={submit}
-              disabled={entry === ''}
-            >
-              Enter
-            </button>
-          </div>
-        )}
-
-        {!over && (
-          <button type="button" className="btn btn-danger min-h-14 text-xl" onClick={bust}>
-            Bust
-          </button>
+          </>
         )}
       </div>
     </div>
