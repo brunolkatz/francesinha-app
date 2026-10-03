@@ -132,7 +132,7 @@ function VisitHistory({ x01 }) {
   )
 }
 
-export default function X01Board({ x01, onScore, onBust, onNextLeg, onRename }) {
+export default function X01Board({ x01, onScore, onBust, onUndo, onNextLeg, onRename }) {
   const [entry, setEntry] = useState('')
   const [error, setError] = useState(null)
 
@@ -266,11 +266,28 @@ export default function X01Board({ x01, onScore, onBust, onNextLeg, onRename }) 
                 Enter
               </button>
             </div>
-            <button type="button" className="btn btn-danger min-h-14 text-xl" onClick={bust}>
-              Bust
-            </button>
           </>
         )}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn min-h-14 flex-1 text-xl"
+            onClick={() => {
+              setError(null)
+              setEntry('')
+              onUndo()
+            }}
+            disabled={x01.visits.length === 0}
+          >
+            Undo
+          </button>
+          {!over && (
+            <button type="button" className="btn btn-danger min-h-14 flex-[2] text-xl" onClick={bust}>
+              Bust
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

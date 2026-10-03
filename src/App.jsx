@@ -24,7 +24,6 @@ export default function App() {
   const { players } = fr
   const is501 = mode === '501'
   const full = players.length >= MAX_PLAYERS
-  const canUndo = (is501 ? x01.visits : fr.history).length > 0
 
   const rename = (index, name) => dispatch({ type: 'rename', index, name })
   const remove = (index) => dispatch({ type: 'removePlayer', index })
@@ -41,14 +40,17 @@ export default function App() {
         </h1>
 
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            className="btn"
-            onClick={() => dispatch({ type: is501 ? 'x01/undo' : 'undo' })}
-            disabled={!canUndo}
-          >
-            Undo
-          </button>
+          {/* In 501 the Undo sits next to Bust, under the keypad. */}
+          {!is501 && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => dispatch({ type: 'undo' })}
+              disabled={fr.history.length === 0}
+            >
+              Undo
+            </button>
+          )}
           {is501 ? (
             <button type="button" className="btn" onClick={() => setEditingPlayers(true)}>
               Players
@@ -119,6 +121,7 @@ export default function App() {
             x01={x01}
             onScore={(value) => dispatch({ type: 'x01/score', value })}
             onBust={() => dispatch({ type: 'x01/bust' })}
+            onUndo={() => dispatch({ type: 'x01/undo' })}
             onNextLeg={() => dispatch({ type: 'x01/nextLeg' })}
             onRename={(side, player, name) => dispatch({ type: 'x01/rename', side, player, name })}
           />
