@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import PlayerName from './PlayerName.jsx'
 import {
+  DARTS_PER_VISIT,
   MAX_VISIT,
   averageOf,
   isBust,
@@ -86,7 +87,7 @@ function LegScore({ x01 }) {
   )
 }
 
-const HISTORY_COLUMNS = 'grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4.5rem] items-center gap-2'
+const HISTORY_COLUMNS = 'grid grid-cols-[3rem_minmax(0,1fr)_4.5rem_4.5rem] items-center gap-2'
 
 function VisitHistory({ x01 }) {
   const log = visitLog(x01).reverse()
@@ -94,15 +95,13 @@ function VisitHistory({ x01 }) {
     <div className="felt flex h-36 shrink-0 flex-col rounded-xl sm:h-40">
       <p className="flex justify-between border-b border-white/10 px-3 py-1 text-sm font-semibold uppercase tracking-widest text-copper">
         <span>Leg {x01.leg + 1} history</span>
-        <span>
-          {log.length} {log.length === 1 ? 'visit' : 'visits'}
-        </span>
+        <span>{log.length * DARTS_PER_VISIT} darts</span>
       </p>
       <p
         className={`${HISTORY_COLUMNS} border-b border-white/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-widest text-cream/50`}
         aria-hidden="true"
       >
-        <span>#</span>
+        <span>Darts</span>
         <span>Player</span>
         <span className="text-right">Scored</span>
         <span className="text-right">To go</span>
@@ -118,7 +117,7 @@ function VisitHistory({ x01 }) {
               key={v.number}
               className={`${HISTORY_COLUMNS} border-b border-white/5 py-1 text-lg tabular-nums last:border-0`}
             >
-              <span className="text-cream/40">{v.number}</span>
+              <span className="text-cream/40">{v.darts}</span>
               <span className="truncate font-semibold tracking-wide">{playerName(x01, v.side, v.player)}</span>
               <span className={`text-right font-bold ${v.bust ? 'text-[#e8796b]' : 'text-brass'}`}>
                 {v.bust ? 'Bust' : v.score}

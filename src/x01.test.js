@@ -159,14 +159,14 @@ test('in pairs the starting player rotates through all four over the legs', () =
   assert.deepEqual(g.x01.legs, [2, 2])
 })
 
-test('the visit log numbers each visit and tracks what it left', () => {
+test('the visit log counts three darts per visit for each side and tracks what it left', () => {
   const log = visitLog(play(createState(), score(60), score(100), { type: 'x01/bust' }).x01)
   assert.deepEqual(
-    log.map(({ number, side, score, bust, remaining }) => [number, side, score, bust, remaining]),
+    log.map(({ darts, side, score, bust, remaining }) => [darts, side, score, bust, remaining]),
     [
-      [1, 0, 60, false, 441],
-      [2, 1, 100, false, 401],
-      [3, 0, 0, true, 441],
+      [3, 0, 60, false, 441],
+      [3, 1, 100, false, 401],
+      [6, 0, 0, true, 441],
     ],
   )
 })

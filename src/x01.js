@@ -4,6 +4,7 @@
 
 export const START = 501
 export const MAX_VISIT = 180
+export const DARTS_PER_VISIT = 3
 export const FORMATS = ['singles', 'pairs']
 const NAME_MAX = 14
 
@@ -103,12 +104,15 @@ export const playerName = (state, side, player) => state.names[side][player]
 export const sideName = (state, side) =>
   state.format === 'pairs' ? state.names[side].join(' & ') : state.names[side][0]
 
-// The leg's visits with the score each one left, oldest first.
+// The leg's visits, oldest first, with the score each one left and how many
+// darts that side had thrown by then. Every visit counts as three darts.
 export function visitLog(state) {
   const left = [START, START]
+  const darts = [0, 0]
   return state.visits.map((v, index) => {
     left[v.side] -= v.score
-    return { ...v, number: index + 1, remaining: left[v.side] }
+    darts[v.side] += DARTS_PER_VISIT
+    return { ...v, number: index + 1, darts: darts[v.side], remaining: left[v.side] }
   })
 }
 
