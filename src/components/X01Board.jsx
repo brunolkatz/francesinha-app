@@ -91,7 +91,7 @@ const HISTORY_COLUMNS = 'grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4.5rem] items
 function VisitHistory({ x01 }) {
   const log = visitLog(x01).reverse()
   return (
-    <div className="felt flex h-40 shrink-0 flex-col rounded-xl sm:h-44">
+    <div className="felt flex h-36 shrink-0 flex-col rounded-xl sm:h-40">
       <p className="flex justify-between border-b border-white/10 px-3 py-1 text-sm font-semibold uppercase tracking-widest text-copper">
         <span>Leg {x01.leg + 1} history</span>
         <span>
@@ -160,7 +160,7 @@ export default function X01Board({ x01, onScore, onBust, onNextLeg, onRename }) 
       setError(problem)
       return
     }
-    onScore(value, isBust(remaining, value))
+    onScore(value)
     setEntry('')
   }
 
@@ -201,7 +201,7 @@ export default function X01Board({ x01, onScore, onBust, onNextLeg, onRename }) 
 
   return (
     <div className="flex min-h-full flex-col gap-3 landscape:h-full landscape:min-h-0 landscape:flex-row">
-      <div className="wood flex min-h-0 flex-col gap-1.5 rounded-xl p-2.5 portrait:h-[30dvh] portrait:min-h-56 portrait:shrink-0 landscape:w-[46%]">
+      <div className="wood flex min-h-0 flex-col gap-1.5 rounded-xl p-2.5 portrait:h-[26dvh] portrait:min-h-64 portrait:shrink-0 landscape:w-[46%]">
         <LegScore x01={x01} />
         <div className="flex min-h-0 flex-1 gap-1.5 landscape:flex-col">
           {SIDES.map((side) => (

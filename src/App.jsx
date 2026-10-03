@@ -6,7 +6,6 @@ import WinModal from './components/WinModal.jsx'
 import ResetConfirm from './components/ResetConfirm.jsx'
 import { MAX_PLAYERS } from './game.js'
 import { MODES, loadState, reducer, saveState } from './store.js'
-import { playClick } from './sound.js'
 import { sideName, winnerOf } from './x01.js'
 
 const MODE_LABELS = { francesinha: 'Francesinha', 501: '501' }
@@ -14,7 +13,6 @@ const MODE_LABELS = { francesinha: 'Francesinha', 501: '501' }
 export default function App() {
   const [state, dispatch] = useReducer(reducer, undefined, loadState)
   const [confirmingReset, setConfirmingReset] = useState(false)
-  const [sound, setSound] = useState(false)
   const [editingPlayers, setEditingPlayers] = useState(false)
 
   // Every change is saved, so a reload or a closed tab resumes both games.
@@ -31,48 +29,18 @@ export default function App() {
   const rename = (index, name) => dispatch({ type: 'rename', index, name })
   const remove = (index) => dispatch({ type: 'removePlayer', index })
 
-  const tap = (player, row) => {
-    if (sound) playClick(false)
-    dispatch({ type: 'tap', player, row })
-  }
+  const tap = (player, row) => dispatch({ type: 'tap', player, row })
 
   const x01Winner = winnerOf(x01)
 
   return (
     <div className="flex h-dvh min-h-[440px] flex-col">
-      <header className="px-safe flex flex-wrap items-center gap-x-4 gap-y-2 pb-1 pt-[max(0.6rem,env(safe-area-inset-top))]">
-        <h1 className="text-3xl font-extrabold uppercase tracking-[0.2em] text-copper">
+      <header className="px-safe flex flex-wrap items-center gap-x-3 gap-y-2 pb-1 pt-[max(0.6rem,env(safe-area-inset-top))]">
+        <h1 className="text-2xl font-extrabold uppercase tracking-[0.12em] text-copper lg:text-3xl lg:tracking-[0.2em]">
           Francesinha
         </h1>
 
-        <div className="flex rounded-xl border border-copper/55 bg-black/30 p-1" role="group" aria-label="Game">
-          {MODES.map((m) => (
-            <button
-              key={m}
-              type="button"
-              aria-pressed={mode === m}
-              onClick={() => {
-                setConfirmingReset(false)
-                dispatch({ type: 'setMode', mode: m })
-              }}
-              className={`min-h-10 rounded-lg px-4 text-base font-bold uppercase tracking-widest transition-colors ${
-                mode === m ? 'bg-copper text-bar' : 'text-cream/70'
-              }`}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          ))}
-        </div>
-
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            className="btn"
-            aria-pressed={sound}
-            onClick={() => setSound(!sound)}
-          >
-            Sound {sound ? 'on' : 'off'}
-          </button>
           <button
             type="button"
             className="btn"
@@ -124,20 +92,33 @@ export default function App() {
             )}
           </div>
         </div>
+        {/* The game toggle sits at the far right, with the actions to its left. */}
+        <div className="flex rounded-xl border border-copper/55 bg-black/30 p-1" role="group" aria-label="Game">
+          {MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => {
+                setConfirmingReset(false)
+                dispatch({ type: 'setMode', mode: m })
+              }}
+              className={`min-h-10 rounded-lg px-4 text-base font-bold uppercase tracking-widest transition-colors ${
+                mode === m ? 'bg-copper text-bar' : 'text-cream/70'
+              }`}
+            >
+              {MODE_LABELS[m]}
+            </button>
+          ))}
+        </div>
       </header>
 
-      <main className="px-safe min-h-0 flex-1 pt-2 portrait:overflow-y-auto">
+      <main className="px-safe pb-safe min-h-0 flex-1 pt-2 portrait:overflow-y-auto">
         {is501 ? (
           <X01Board
             x01={x01}
-            onScore={(value, bust) => {
-              if (sound) playClick(bust)
-              dispatch({ type: 'x01/score', value })
-            }}
-            onBust={() => {
-              if (sound) playClick(true)
-              dispatch({ type: 'x01/bust' })
-            }}
+            onScore={(value) => dispatch({ type: 'x01/score', value })}
+            onBust={() => dispatch({ type: 'x01/bust' })}
             onNextLeg={() => dispatch({ type: 'x01/nextLeg' })}
             onRename={(side, player, name) => dispatch({ type: 'x01/rename', side, player, name })}
           />
@@ -145,11 +126,6 @@ export default function App() {
           <Scoreboard players={players} onRename={rename} onTap={tap} onRemove={remove} />
         )}
       </main>
-
-      <p className="pb-safe px-3 pt-2 text-center text-sm tracking-widest text-cream/45">
-        {is501 ? `501 ${x01.format} · straight in, double out` : 'Tap a wire to add a mark'} · Join on this network:{' '}
-        <span className="select-text text-cream/70">{window.location.origin}{window.location.pathname.replace(/\/$/, '')}</span>
-      </p>
 
       {!is501 && fr.winner !== null && (
         <WinModal
