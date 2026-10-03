@@ -104,15 +104,19 @@ export const playerName = (state, side, player) => state.names[side][player]
 export const sideName = (state, side) =>
   state.format === 'pairs' ? state.names[side].join(' & ') : state.names[side][0]
 
-// The leg's visits, oldest first, with the score each one left and how many
-// darts that side had thrown by then. Every visit counts as three darts.
+// The leg's visits, oldest first, with the score each one left and the
+// running count of darts thrown in the leg by everyone. Every visit counts
+// as three darts.
 export function visitLog(state) {
   const left = [START, START]
-  const darts = [0, 0]
   return state.visits.map((v, index) => {
     left[v.side] -= v.score
-    darts[v.side] += DARTS_PER_VISIT
-    return { ...v, number: index + 1, darts: darts[v.side], remaining: left[v.side] }
+    return {
+      ...v,
+      number: index + 1,
+      darts: (index + 1) * DARTS_PER_VISIT,
+      remaining: left[v.side],
+    }
   })
 }
 
