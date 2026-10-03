@@ -9,7 +9,8 @@ test('starts with one player and an empty board', () => {
   const g = createGame()
   assert.equal(g.players.length, 1)
   assert.equal(g.players[0].name, 'Player 1')
-  assert.deepEqual(g.players[0].marks, [0, 0, 0, 0, 0, 0, 0, 0, 0])
+  assert.deepEqual(ROWS, ['20', '19', '18', '17', '16', '15', '14', 'C', 'D', 'T'])
+  assert.deepEqual(g.players[0].marks, ROWS.map(() => 0))
 })
 
 test('a tap is exactly one mark on that wire, any row, any player', () => {
@@ -29,7 +30,7 @@ test('tapping a closed wire clears it', () => {
 test('out-of-range taps are ignored', () => {
   const g = createGame()
   assert.equal(reducer(g, tap(3, 0)), g)
-  assert.equal(reducer(g, tap(0, 9)), g)
+  assert.equal(reducer(g, tap(0, ROWS.length)), g)
 })
 
 test('max 5 players', () => {
@@ -49,7 +50,7 @@ test('closing every wire announces the winner; dismiss and undo clear it', () =>
   assert.equal(reducer(won, { type: 'dismissWin' }).winner, null)
   const undone = reducer(won, { type: 'undo' })
   assert.equal(undone.winner, null)
-  assert.equal(undone.players[0].marks[8], 2)
+  assert.equal(undone.players[0].marks[ROWS.length - 1], 2)
 })
 
 test('undo reverts taps one at a time and keeps added players', () => {
@@ -64,7 +65,7 @@ test('undo reverts taps one at a time and keeps added players', () => {
 
 test('supports at least 30 undos', () => {
   let g = createGame()
-  for (let i = 0; i < 40; i++) g = reducer(g, tap(0, i % 9))
+  for (let i = 0; i < 40; i++) g = reducer(g, tap(0, i % ROWS.length))
   assert.ok(g.history.length >= 30)
 })
 

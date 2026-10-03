@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import BeadWire from './BeadWire.jsx'
 import { ROWS, closedCount } from '../game.js'
 
-const GRID = 'grid grid-cols-[minmax(0,1fr)] grid-rows-[2.75rem_repeat(9,minmax(0,1fr))_3.5rem]'
+// The repeat count must match ROWS.length (Tailwind needs a literal class).
+const GRID = 'grid grid-cols-[minmax(0,1fr)] grid-rows-[2.75rem_repeat(10,minmax(0,1fr))_3.5rem]'
 
 function PlayerName({ name, active, onRename }) {
   const [draft, setDraft] = useState(null)

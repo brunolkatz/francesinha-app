@@ -1,7 +1,7 @@
 // Francesinha scoreboard state: a manual abacus. Every wire is tapped by
 // hand, one mark at a time, so any house variant can be played on it.
 
-export const ROWS = ['20', '19', '18', '17', '16', '15', 'C', 'D', 'T']
+export const ROWS = ['20', '19', '18', '17', '16', '15', '14', 'C', 'D', 'T']
 export const MAX_PLAYERS = 5
 export const MARKS_TO_CLOSE = 3
 const HISTORY_LIMIT = 60
