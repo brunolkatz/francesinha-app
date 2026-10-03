@@ -90,6 +90,7 @@ export default function App() {
           players={players}
           onRename={(index, name) => dispatch({ type: 'rename', index, name })}
           onTap={tap}
+          onRemove={(index) => dispatch({ type: 'removePlayer', index })}
         />
       </main>
 

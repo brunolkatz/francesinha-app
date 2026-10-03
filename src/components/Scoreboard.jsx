@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import BeadWire from './BeadWire.jsx'
 import { ROWS, closedCount } from '../game.js'
 
-const GRID = 'grid grid-cols-[minmax(0,1fr)] grid-rows-[2.75rem_repeat(9,minmax(0,1fr))_1.75rem]'
+const GRID = 'grid grid-cols-[minmax(0,1fr)] grid-rows-[2.75rem_repeat(9,minmax(0,1fr))_2.75rem]'
 
 function PlayerName({ name, active, onRename }) {
   const [draft, setDraft] = useState(null)
@@ -47,7 +47,59 @@ function PlayerName({ name, active, onRename }) {
   )
 }
 
-export default function Scoreboard({ players, onRename, onTap }) {
+// Two taps to remove: the × arms a "Remove?" button that disarms itself
+// after a few seconds, so a stray tap never wipes a column.
+function ColumnFooter({ player, done, canRemove, onRemove }) {
+  const [armed, setArmed] = useState(false)
+
+  useEffect(() => {
+    if (!armed) return
+    const timer = setTimeout(() => setArmed(false), 3000)
+    return () => clearTimeout(timer)
+  }, [armed])
+
+  if (armed) {
+    return (
+      <div className="flex items-center px-1">
+        <button
+          type="button"
+          onClick={onRemove}
+          onBlur={() => setArmed(false)}
+          autoFocus
+          className="h-9 w-full rounded-md bg-[#a5392c] text-sm font-bold uppercase tracking-wide text-cream"
+        >
+          Remove?
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center justify-center">
+      <span
+        className={`min-w-0 flex-1 text-center text-sm font-semibold tracking-widest ${
+          canRemove ? 'pl-2 sm:pl-10' : ''
+        } ${
+          done ? 'text-brass' : 'text-cream/50'
+        }`}
+      >
+        {closedCount(player)}/{ROWS.length}
+      </span>
+      {canRemove && (
+        <button
+          type="button"
+          onClick={() => setArmed(true)}
+          aria-label={`Remove ${player.name}`}
+          className="flex h-full w-10 shrink-0 items-center justify-center text-2xl leading-none text-cream/40 active:text-cream"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function Scoreboard({ players, onRename, onTap, onRemove }) {
   return (
     <div className="wood flex h-full w-full gap-1.5 rounded-xl p-2.5">
       <div className={`${GRID} rail w-11 shrink-0 rounded-md sm:w-14`}>
@@ -69,7 +121,7 @@ export default function Scoreboard({ players, onRename, onTap }) {
           const done = closedCount(player) === ROWS.length
           return (
             <div
-              key={index}
+              key={player.id}
               className={`${GRID} felt min-w-[4.5rem] flex-1 rounded-md ${
                 done ? 'felt-active' : ''
               }`}
@@ -90,13 +142,12 @@ export default function Scoreboard({ players, onRename, onTap }) {
                   onTap={() => onTap(index, rowIndex)}
                 />
               ))}
-              <div
-                className={`flex items-center justify-center text-sm font-semibold tracking-widest ${
-                  done ? 'text-brass' : 'text-cream/50'
-                }`}
-              >
-                {closedCount(player)}/{ROWS.length}
-              </div>
+              <ColumnFooter
+                player={player}
+                done={done}
+                canRemove={players.length > 1}
+                onRemove={() => onRemove(index)}
+              />
             </div>
           )
         })}

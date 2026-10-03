@@ -9,7 +9,10 @@ const NAME_MAX = 14
 
 export const defaultName = (index) => `Player ${index + 1}`
 
-const freshPlayer = (name) => ({
+// Ids are stable for the life of a table, so undo history still lines up
+// after a player is removed from the middle.
+const freshPlayer = (name, id) => ({
+  id,
   name,
   marks: ROWS.map(() => 0),
 })
@@ -17,10 +20,20 @@ const freshPlayer = (name) => ({
 export function createGame(names = [defaultName(0)]) {
   return {
     players: names.map(freshPlayer),
+    nextId: names.length,
     // Index of the player whose win modal is showing, or null.
     winner: null,
     history: [],
   }
+}
+
+// First "Player N" nobody at the table is using, so a seat freed by a
+// removal does not produce two players with the same default name.
+function unusedName(players) {
+  const taken = new Set(players.map((p) => p.name))
+  let index = 0
+  while (taken.has(defaultName(index))) index++
+  return defaultName(index)
 }
 
 export const closedCount = (player) =>
@@ -40,9 +53,10 @@ function tap(state, playerIndex, rowIndex) {
     ...state,
     players: state.players.map((p, i) => (i === playerIndex ? updated : p)),
     winner: boardClosed(updated) ? playerIndex : null,
-    history: [...state.history, state.players.map((p) => p.marks)].slice(
-      -HISTORY_LIMIT,
-    ),
+    history: [
+      ...state.history,
+      state.players.map((p) => ({ id: p.id, marks: p.marks })),
+    ].slice(-HISTORY_LIMIT),
   }
 }
 
@@ -51,10 +65,12 @@ function undo(state) {
   if (!previous) return state
   return {
     ...state,
-    // Players added since the snapshot stay seated, untouched.
-    players: state.players.map((p, i) =>
-      previous[i] ? { ...p, marks: previous[i] } : p,
-    ),
+    // Players added since the snapshot stay seated, untouched, and
+    // removed players stay removed.
+    players: state.players.map((p) => {
+      const saved = previous.find((entry) => entry.id === p.id)
+      return saved ? { ...p, marks: saved.marks } : p
+    }),
     winner: null,
     history: state.history.slice(0, -1),
   }
@@ -70,7 +86,16 @@ export function reducer(state, action) {
       if (state.players.length >= MAX_PLAYERS) return state
       return {
         ...state,
-        players: [...state.players, freshPlayer(defaultName(state.players.length))],
+        players: [...state.players, freshPlayer(unusedName(state.players), state.nextId)],
+        nextId: state.nextId + 1,
+      }
+    case 'removePlayer':
+      // The table never goes below one player.
+      if (state.players.length <= 1 || !state.players[action.index]) return state
+      return {
+        ...state,
+        players: state.players.filter((_, i) => i !== action.index),
+        winner: null,
       }
     case 'rename': {
       const name =

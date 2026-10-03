@@ -87,3 +87,47 @@ test('blank rename falls back to the default name', () => {
   const g = reducer(createGame(), { type: 'rename', index: 0, name: '   ' })
   assert.equal(g.players[0].name, 'Player 1')
 })
+
+test('removing a player keeps the others and never empties the table', () => {
+  let g = play(
+    createGame(),
+    { type: 'addPlayer' },
+    { type: 'addPlayer' },
+    tap(0, 0),
+    tap(1, 1),
+    tap(2, 2),
+    { type: 'removePlayer', index: 1 },
+  )
+  assert.deepEqual(g.players.map((p) => p.name), ['Player 1', 'Player 3'])
+  assert.equal(g.players[1].marks[2], 1)
+  g = play(g, { type: 'removePlayer', index: 0 })
+  assert.equal(g.players.length, 1)
+  assert.equal(reducer(g, { type: 'removePlayer', index: 0 }), g)
+})
+
+test('undo after a removal restores the right players and skips the removed one', () => {
+  let g = play(
+    createGame(),
+    { type: 'addPlayer' },
+    { type: 'addPlayer' },
+    tap(1, 1),
+    tap(2, 2),
+    { type: 'removePlayer', index: 1 },
+  )
+  g = reducer(g, { type: 'undo' })
+  assert.equal(g.players.length, 2)
+  assert.equal(g.players[1].name, 'Player 3')
+  assert.equal(g.players[1].marks[2], 0)
+})
+
+test('a new player after a removal gets an unused default name', () => {
+  const g = play(
+    createGame(),
+    { type: 'addPlayer' },
+    { type: 'addPlayer' },
+    { type: 'removePlayer', index: 1 },
+    { type: 'addPlayer' },
+  )
+  assert.deepEqual(g.players.map((p) => p.name), ['Player 1', 'Player 3', 'Player 2'])
+  assert.equal(new Set(g.players.map((p) => p.id)).size, 3)
+})
