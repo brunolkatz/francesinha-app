@@ -52,7 +52,7 @@ function SideCard({ x01, side, thrower, winner, onRename }) {
           </div>
         ))}
         <p className="w-full truncate px-1 text-sm tracking-wider text-cream/55 portrait:text-center sm:text-base">
-          {last ? `Last pts. ${last.bust ? 'bust' : last.score}` : 'No visits this leg'}
+          {last ? `Last pts. ${last.bust ? 'bust' : last.score}` : 'No plays yet'}
         </p>
       </div>
 
