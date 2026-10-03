@@ -48,13 +48,15 @@ function PlayerName({ name, active, onRename }) {
 }
 
 // Two taps to remove: the × arms a "Remove?" button that disarms itself
-// after a few seconds, so a stray tap never wipes a column.
+// after a few seconds, so a stray tap never wipes a column. It must not
+// disarm on blur: Safari blurs a button when it is tapped, which would
+// unmount it before its own click fires.
 function ColumnFooter({ player, done, canRemove, onRemove }) {
   const [armed, setArmed] = useState(false)
 
   useEffect(() => {
     if (!armed) return
-    const timer = setTimeout(() => setArmed(false), 3000)
+    const timer = setTimeout(() => setArmed(false), 4000)
     return () => clearTimeout(timer)
   }, [armed])
 
@@ -64,8 +66,6 @@ function ColumnFooter({ player, done, canRemove, onRemove }) {
         <button
           type="button"
           onClick={onRemove}
-          onBlur={() => setArmed(false)}
-          autoFocus
           className="h-9 w-full rounded-lg bg-[#a5392c] text-sm font-bold uppercase tracking-wide text-cream sm:h-11 sm:text-base"
         >
           Remove?
