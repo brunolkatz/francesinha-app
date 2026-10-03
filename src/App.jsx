@@ -96,7 +96,7 @@ export default function App() {
 
       <p className="pb-safe px-3 pt-2 text-center text-sm tracking-widest text-cream/45">
         Tap a wire to add a mark · Join on this network:{' '}
-        <span className="select-text text-cream/70">http://{window.location.host}</span>
+        <span className="select-text text-cream/70">{window.location.origin}{window.location.pathname.replace(/\/$/, '')}</span>
       </p>
 
       {winner !== null && (
