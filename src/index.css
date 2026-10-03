@@ -1,0 +1,237 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-pine: #c4a574;
+  --color-pine-dark: #a3834f;
+  --color-felt: #121212;
+  --color-felt-warm: #241a11;
+  --color-copper: #c4894a;
+  --color-brass: #e0bd6a;
+  --color-cream: #f3e6cb;
+  --color-bar: #1b110a;
+  --color-walnut: #3a2414;
+  --font-condensed: 'Avenir Next Condensed', 'Roboto Condensed', 'Arial Narrow',
+    'Helvetica Neue', Arial, sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--color-bar);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--color-cream);
+  font-family: var(--font-condensed);
+  font-stretch: condensed;
+  background: radial-gradient(120% 90% at 50% 0%, #3a2516 0%, #1b110a 60%, #100905 100%);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* In the components layer so Tailwind utilities (hidden, flex-1, …) win. */
+@layer components {
+  /* Wood ------------------------------------------------------------------ */
+
+  .wood {
+    background:
+      repeating-linear-gradient(
+        91deg,
+        rgba(110, 70, 25, 0.1) 0 2px,
+        transparent 2px 11px
+      ),
+      linear-gradient(180deg, #d1b384 0%, var(--color-pine) 45%, #b4945f 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 240, 210, 0.45),
+      inset 0 -2px 3px rgba(70, 40, 10, 0.35),
+      0 10px 28px rgba(0, 0, 0, 0.55);
+  }
+
+  .rail {
+    background: linear-gradient(90deg, #2b1a0e, var(--color-walnut));
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+  }
+
+  .rail-label {
+    color: var(--color-copper);
+    text-shadow:
+      0 1px 0 rgba(255, 215, 160, 0.35),
+      0 -1px 1px rgba(0, 0, 0, 0.8);
+  }
+
+  .felt {
+    background: var(--color-felt);
+    box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.9);
+    transition: background-color 250ms;
+  }
+
+  .felt-active {
+    background: var(--color-felt-warm);
+    box-shadow:
+      inset 0 0 14px rgba(0, 0, 0, 0.7),
+      inset 0 0 0 1px rgba(196, 137, 74, 0.35);
+  }
+
+  /* Bead wire ------------------------------------------------------------- */
+
+  .wire {
+    position: relative;
+    container-type: size;
+    --bead: min(68cqh, 20cqw);
+    border-radius: 0.7rem;
+    outline: 2px solid transparent;
+    outline-offset: 1px;
+    transition: outline-color 200ms;
+  }
+
+  .wire-active {
+    outline-color: var(--color-copper);
+    background: rgba(196, 137, 74, 0.1);
+  }
+
+  .wire-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+    background: #6d6a64;
+    border-radius: 2px;
+    transition:
+      background-color 200ms,
+      box-shadow 200ms;
+  }
+
+  .wire-closed {
+    background: var(--color-brass);
+    box-shadow: 0 0 6px rgba(224, 189, 106, 0.75);
+  }
+
+  .bead {
+    position: absolute;
+    top: 50%;
+    width: var(--bead);
+    height: var(--bead);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fbeccb 0%, #e2c08a 38%, #b88a4e 78%, #8e6632 100%);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.7),
+      inset 0 -2px 3px rgba(80, 45, 10, 0.45);
+    transform: translate(0, -50%);
+    transition: transform 200ms cubic-bezier(0.3, 0.9, 0.4, 1.1);
+  }
+
+  .bead-dark {
+    background: radial-gradient(circle at 35% 30%, #a9764a 0%, #6b4226 40%, #3d2312 80%, #24140a 100%);
+  }
+
+  .bead-marked {
+    transform: translate(calc(100cqw - 3 * var(--bead)), -50%);
+  }
+
+  /* Dartboard ------------------------------------------------------------- */
+
+  .segment {
+    cursor: pointer;
+    stroke: #b9b3a4;
+    stroke-width: 0.6;
+  }
+
+  .segment-flash {
+    pointer-events: none;
+    fill: #fff6dc;
+    animation: segment-flash 280ms ease-out forwards;
+  }
+
+  @keyframes segment-flash {
+    from {
+      opacity: 0.85;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  /* Controls -------------------------------------------------------------- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 1.1rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-cream);
+    background: linear-gradient(180deg, #4a2f1b, #2e1c0f);
+    border: 1px solid rgba(196, 137, 74, 0.55);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 220, 170, 0.15),
+      0 2px 6px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    transition:
+      transform 80ms,
+      filter 120ms;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
+    filter: brightness(1.2);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    color: #1b110a;
+    background: linear-gradient(180deg, #dba568, var(--color-copper));
+    border-color: #e6b77f;
+  }
+
+  .btn-danger {
+    color: var(--color-cream);
+    background: linear-gradient(180deg, #a5392c, #7a251b);
+    border-color: #c9584a;
+  }
+
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .px-safe {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  @media (max-width: 480px) {
+    .btn {
+      padding: 0 0.8rem;
+      font-size: 0.95rem;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bead,
+  .segment-flash {
+    transition: none;
+    animation-duration: 1ms;
+  }
+}
