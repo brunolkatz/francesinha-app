@@ -1,44 +1,16 @@
 import { useEffect, useReducer, useState } from 'react'
 import Scoreboard from './components/Scoreboard.jsx'
-import Dartboard from './components/Dartboard.jsx'
-import TurnBar from './components/TurnBar.jsx'
 import WinModal from './components/WinModal.jsx'
 import ResetConfirm from './components/ResetConfirm.jsx'
-import {
-  DARTS_PER_VISIT,
-  MAX_PLAYERS,
-  MISS,
-  createGame,
-  loadNames,
-  marksFor,
-  reducer,
-  saveNames,
-} from './game.js'
+import { MAX_PLAYERS, createGame, loadNames, reducer, saveNames } from './game.js'
 import { playClick } from './sound.js'
-
-function Pips({ left }) {
-  return (
-    <div className="flex gap-1.5" aria-label={`${left} darts left`}>
-      {Array.from({ length: DARTS_PER_VISIT }, (_, i) => (
-        <span
-          key={i}
-          className={`h-4 w-4 rounded-full border border-copper transition-colors ${
-            i < left ? 'bg-copper' : 'bg-transparent'
-          }`}
-        />
-      ))}
-    </div>
-  )
-}
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, undefined, () => createGame(loadNames()))
   const [confirmingReset, setConfirmingReset] = useState(false)
   const [sound, setSound] = useState(false)
 
-  const { players, current, dartsLeft, winner, history } = state
-  const player = players[current]
-  const over = winner !== null
+  const { players, winner, history } = state
   const full = players.length >= MAX_PLAYERS
 
   const names = players.map((p) => p.name).join('\n')
@@ -46,25 +18,17 @@ export default function App() {
     saveNames(names.split('\n'))
   }, [names])
 
-  const throwDart = (hit) => {
-    if (over) return
-    if (sound) playClick(marksFor(player.row, hit) === 0)
-    dispatch({ type: 'throw', hit })
+  const tap = (player, row) => {
+    if (sound) playClick(false)
+    dispatch({ type: 'tap', player, row })
   }
 
   return (
-    <div className="flex min-h-dvh flex-col landscape:h-dvh landscape:min-h-[520px]">
+    <div className="flex h-dvh min-h-[440px] flex-col">
       <header className="px-safe flex flex-wrap items-center gap-x-4 gap-y-2 pb-1 pt-[max(0.6rem,env(safe-area-inset-top))]">
         <h1 className="text-3xl font-extrabold uppercase tracking-[0.2em] text-copper">
           Francesinha
         </h1>
-
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="truncate text-2xl font-bold tracking-wider">
-            {over ? `${players[winner].name} wins` : player.name}
-          </span>
-          {!over && <Pips left={dartsLeft} />}
-        </div>
 
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <button
@@ -77,7 +41,7 @@ export default function App() {
           </button>
           <button
             type="button"
-            className="btn portrait:hidden"
+            className="btn"
             onClick={() => dispatch({ type: 'undo' })}
             disabled={history.length === 0}
           >
@@ -121,30 +85,20 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col gap-3 pt-2 landscape:flex-row landscape:px-3 landscape:pb-3">
-        <section className="portrait:h-[clamp(300px,34dvh,480px)] portrait:px-3 landscape:h-full landscape:w-[46%]">
-          <Scoreboard
-            players={players}
-            current={current}
-            winner={winner}
-            onRename={(index, name) => dispatch({ type: 'rename', index, name })}
-          />
-        </section>
-
-        <section className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="relative mx-auto min-h-[280px] w-full flex-1">
-            <Dartboard onHit={throwDart} disabled={over} />
-          </div>
-          <TurnBar
-            state={state}
-            onMiss={() => throwDart(MISS)}
-            onEndVisit={() => dispatch({ type: 'endVisit' })}
-            onUndo={() => dispatch({ type: 'undo' })}
-          />
-        </section>
+      <main className="px-safe min-h-0 flex-1 pt-2">
+        <Scoreboard
+          players={players}
+          onRename={(index, name) => dispatch({ type: 'rename', index, name })}
+          onTap={tap}
+        />
       </main>
 
-      {over && state.winModalOpen && (
+      <p className="pb-safe px-3 pt-2 text-center text-sm tracking-widest text-cream/45">
+        Tap a wire to add a mark · Join on this network:{' '}
+        <span className="select-text text-cream/70">http://{window.location.host}</span>
+      </p>
+
+      {winner !== null && (
         <WinModal
           name={players[winner].name}
           onNewGame={() => dispatch({ type: 'newGame' })}

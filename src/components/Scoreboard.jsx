@@ -47,7 +47,7 @@ function PlayerName({ name, active, onRename }) {
   )
 }
 
-export default function Scoreboard({ players, current, winner, onRename }) {
+export default function Scoreboard({ players, onRename, onTap }) {
   return (
     <div className="wood flex h-full w-full gap-1.5 rounded-xl p-2.5">
       <div className={`${GRID} rail w-11 shrink-0 rounded-md sm:w-14`}>
@@ -66,18 +66,18 @@ export default function Scoreboard({ players, current, winner, onRename }) {
       {/* Columns scroll sideways here, never the page, if 5 cannot fit. */}
       <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto overscroll-x-contain">
         {players.map((player, index) => {
-          const active = index === current && winner === null
+          const done = closedCount(player) === ROWS.length
           return (
             <div
               key={index}
               className={`${GRID} felt min-w-[4.5rem] flex-1 rounded-md ${
-                active ? 'felt-active' : ''
+                done ? 'felt-active' : ''
               }`}
             >
               <div className="flex items-center border-b border-white/5 px-1">
                 <PlayerName
                   name={player.name}
-                  active={active}
+                  active={done}
                   onRename={(name) => onRename(index, name)}
                 />
               </div>
@@ -87,12 +87,12 @@ export default function Scoreboard({ players, current, winner, onRename }) {
                   label={row}
                   marks={player.marks[rowIndex]}
                   dark={row === 'C'}
-                  active={active && player.row === rowIndex}
+                  onTap={() => onTap(index, rowIndex)}
                 />
               ))}
               <div
                 className={`flex items-center justify-center text-sm font-semibold tracking-widest ${
-                  winner === index ? 'text-brass' : 'text-cream/50'
+                  done ? 'text-brass' : 'text-cream/50'
                 }`}
               >
                 {closedCount(player)}/{ROWS.length}

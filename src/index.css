@@ -86,6 +86,11 @@ input {
 
   .wire {
     position: relative;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
     container-type: size;
     --bead: min(68cqh, 20cqw);
     border-radius: 0.7rem;
@@ -94,9 +99,12 @@ input {
     transition: outline-color 200ms;
   }
 
-  .wire-active {
+  .wire:active {
+    background: rgba(196, 137, 74, 0.16);
+  }
+
+  .wire:focus-visible {
     outline-color: var(--color-copper);
-    background: rgba(196, 137, 74, 0.1);
   }
 
   .wire-line {
@@ -138,29 +146,6 @@ input {
 
   .bead-marked {
     transform: translate(calc(100cqw - 3 * var(--bead)), -50%);
-  }
-
-  /* Dartboard ------------------------------------------------------------- */
-
-  .segment {
-    cursor: pointer;
-    stroke: #b9b3a4;
-    stroke-width: 0.6;
-  }
-
-  .segment-flash {
-    pointer-events: none;
-    fill: #fff6dc;
-    animation: segment-flash 280ms ease-out forwards;
-  }
-
-  @keyframes segment-flash {
-    from {
-      opacity: 0.85;
-    }
-    to {
-      opacity: 0;
-    }
   }
 
   /* Controls -------------------------------------------------------------- */
@@ -229,9 +214,7 @@ input {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bead,
-  .segment-flash {
+  .bead {
     transition: none;
-    animation-duration: 1ms;
   }
 }
