@@ -32,18 +32,26 @@ function SideCard({ x01, side, thrower, winner, onRename }) {
     >
       <div className="flex min-w-0 flex-col gap-0.5 portrait:w-full portrait:items-center landscape:flex-1">
         {players.map((player) => (
-          <PlayerName
-            key={player}
-            name={playerName(x01, side, player)}
-            // In a pair, only the partner at the oche lights up.
-            active={winner === side || (active && thrower.player === player)}
-            onRename={(name) => onRename(side, player, name)}
-            className="text-lg tracking-wide portrait:text-center sm:text-2xl landscape:text-left"
-          />
+          <div key={player} className="flex w-full min-w-0 items-baseline gap-2 portrait:justify-center">
+            <div className="min-w-0">
+              <PlayerName
+                name={playerName(x01, side, player)}
+                // In a pair, only the partner at the oche lights up.
+                active={winner === side || (active && thrower.player === player)}
+                onRename={(name) => onRename(side, player, name)}
+                className="text-lg tracking-wide portrait:text-center sm:text-2xl landscape:text-left"
+              />
+            </div>
+            <span
+              className="shrink-0 text-sm tabular-nums tracking-wider text-cream/55 sm:text-base"
+              title="Average per visit since the last reset"
+            >
+              Avg {averageOf(x01, side, player).toFixed(1)}
+            </span>
+          </div>
         ))}
         <p className="w-full truncate px-1 text-sm tracking-wider text-cream/55 portrait:text-center sm:text-base">
-          {last ? (last.bust ? 'Bust' : `Last ${last.score}`) : 'No visits'} · Avg{' '}
-          {averageOf(x01, side).toFixed(1)}
+          {last ? (last.bust ? 'Last: bust' : `Last ${last.score}`) : 'No visits this leg'}
         </p>
       </div>
 
@@ -78,15 +86,26 @@ function LegScore({ x01 }) {
   )
 }
 
+const HISTORY_COLUMNS = 'grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_4.5rem] items-center gap-2'
+
 function VisitHistory({ x01 }) {
   const log = visitLog(x01).reverse()
   return (
-    <div className="felt flex h-32 shrink-0 flex-col rounded-xl sm:h-36">
+    <div className="felt flex h-40 shrink-0 flex-col rounded-xl sm:h-44">
       <p className="flex justify-between border-b border-white/10 px-3 py-1 text-sm font-semibold uppercase tracking-widest text-copper">
         <span>Leg {x01.leg + 1} history</span>
         <span>
           {log.length} {log.length === 1 ? 'visit' : 'visits'}
         </span>
+      </p>
+      <p
+        className={`${HISTORY_COLUMNS} border-b border-white/10 px-3 py-0.5 text-xs font-semibold uppercase tracking-widest text-cream/50`}
+        aria-hidden="true"
+      >
+        <span>#</span>
+        <span>Player</span>
+        <span className="text-right">Scored</span>
+        <span className="text-right">To go</span>
       </p>
       {log.length === 0 ? (
         <p className="flex flex-1 items-center justify-center text-base tracking-wider text-cream/40">
@@ -97,14 +116,14 @@ function VisitHistory({ x01 }) {
           {log.map((v) => (
             <li
               key={v.number}
-              className="grid grid-cols-[2rem_minmax(0,1fr)_4.5rem_5.5rem] items-center gap-2 border-b border-white/5 py-1 text-lg tabular-nums last:border-0"
+              className={`${HISTORY_COLUMNS} border-b border-white/5 py-1 text-lg tabular-nums last:border-0`}
             >
               <span className="text-cream/40">{v.number}</span>
               <span className="truncate font-semibold tracking-wide">{playerName(x01, v.side, v.player)}</span>
               <span className={`text-right font-bold ${v.bust ? 'text-[#e8796b]' : 'text-brass'}`}>
                 {v.bust ? 'Bust' : v.score}
               </span>
-              <span className="text-right text-cream/60">{v.remaining} left</span>
+              <span className="text-right text-cream/80">{v.remaining}</span>
             </li>
           ))}
         </ol>

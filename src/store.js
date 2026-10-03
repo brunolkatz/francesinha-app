@@ -2,7 +2,7 @@
 // players, that both keep their progress while you switch between them.
 
 import { MAX_PLAYERS, ROWS, createGame, reducer as francesinhaReducer } from './game.js'
-import { FORMATS, MAX_VISIT, createX01, remainingOf, x01Reducer } from './x01.js'
+import { FORMATS, MAX_VISIT, createX01, emptyTotals, remainingOf, x01Reducer } from './x01.js'
 
 export const MODES = ['francesinha', '501']
 
@@ -48,13 +48,23 @@ function isValidFrancesinha(fr) {
 
 function isValidX01(x01) {
   if (!FORMATS.includes(x01?.format)) return false
-  const { names, legs, visits } = x01
+  const { names, legs, visits, totals } = x01
   if (!Array.isArray(names) || names.length !== 2) return false
   if (!names.every((pair) => Array.isArray(pair) && pair.length === 2 && pair.every(isName))) {
     return false
   }
   if (!Array.isArray(legs) || legs.length !== 2 || !legs.every((n) => isCount(n))) return false
   if (!isCount(x01.leg) || !Array.isArray(visits)) return false
+  const totalsOk =
+    Array.isArray(totals) &&
+    totals.length === 2 &&
+    totals.every(
+      (pair) =>
+        Array.isArray(pair) &&
+        pair.length === 2 &&
+        pair.every((t) => isCount(t?.scored) && isCount(t.visits)),
+    )
+  if (!totalsOk) return false
   const visitsOk = visits.every(
     (v) => isSide(v?.side) && isSide(v.player) && isCount(v.score, MAX_VISIT) && typeof v.bust === 'boolean',
   )
@@ -65,6 +75,8 @@ function isValidX01(x01) {
 export function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    // Saves from before match averages existed have no totals yet.
+    if (saved?.x01 && saved.x01.totals === undefined) saved.x01.totals = emptyTotals()
     if (MODES.includes(saved?.mode) && isValidFrancesinha(saved.fr) && isValidX01(saved.x01)) {
       return saved
     }

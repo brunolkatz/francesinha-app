@@ -99,8 +99,33 @@ test('undo removes the last visit, including a winning one', () => {
 
 test('average counts busts as zero', () => {
   const g = play(createState(), score(60), score(0), score(100), score(0), { type: 'x01/bust' }).x01
-  assert.equal(averageOf(g, 0), 160 / 3)
-  assert.equal(averageOf(createState().x01, 0), 0)
+  assert.equal(averageOf(g, 0, 0), 160 / 3)
+  assert.equal(averageOf(g, 1, 0), 0)
+  assert.equal(averageOf(createState().x01, 0, 0), 0)
+})
+
+test('a player average runs across legs until the match is reset', () => {
+  // Leg 1: side 0 scores 180, 180, 141 (avg 167); side 1 scores 0, 0.
+  let g = play(onCheckout(createState()), score(141))
+  assert.equal(averageOf(g.x01, 0, 0), 167)
+  g = reducer(g, { type: 'x01/nextLeg' })
+  assert.equal(averageOf(g.x01, 0, 0), 167)
+  // Leg 2 starts with side 1: 60 for them, then 33 for side 0.
+  g = play(g, score(60), score(33))
+  assert.equal(averageOf(g.x01, 0, 0), (501 + 33) / 4)
+  assert.equal(averageOf(g.x01, 1, 0), 60 / 3)
+  g = reducer(g, { type: 'x01/undo' })
+  assert.equal(averageOf(g.x01, 0, 0), 167)
+  g = reducer(g, { type: 'x01/reset' })
+  assert.equal(averageOf(g.x01, 0, 0), 0)
+})
+
+test('in pairs each partner has their own average', () => {
+  const g = play(pairs(), score(100), score(10), score(40), score(20), score(60)).x01
+  assert.equal(averageOf(g, 0, 0), 80)
+  assert.equal(averageOf(g, 0, 1), 40)
+  assert.equal(averageOf(g, 1, 0), 10)
+  assert.equal(averageOf(g, 1, 1), 20)
 })
 
 test('pairs share a score and the four players throw in rotation', () => {

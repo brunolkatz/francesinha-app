@@ -16,6 +16,10 @@ const MAX_CHECKOUT = 170
 // names[side][player]. Numbered in throwing order for pairs: 1, 2, 3, 4.
 export const defaultName = (side, player) => `Player ${player * 2 + side + 1}`
 
+// Per-player scoring totals from finished legs: totals[side][player].
+export const emptyTotals = () =>
+  [0, 1].map(() => [0, 1].map(() => ({ scored: 0, visits: 0 })))
+
 export function createX01() {
   return {
     format: FORMATS[0],
@@ -26,6 +30,8 @@ export function createX01() {
     leg: 0,
     // Visits of the leg in progress, in order: { side, player, score, bust }.
     visits: [],
+    // Banked at the end of each leg so averages run until the match is reset.
+    totals: emptyTotals(),
     winModalOpen: false,
   }
 }
@@ -63,10 +69,20 @@ export function winnerOf(state) {
 export const legsOf = (state, side) =>
   state.legs[side] + (winnerOf(state) === side ? 1 : 0)
 
-export function averageOf(state, side) {
-  const visits = sideVisits(state, side)
-  if (visits.length === 0) return 0
-  return visits.reduce((sum, v) => sum + v.score, 0) / visits.length
+// A player's totals over the whole match: finished legs plus this one.
+function totalsOf(state, side, player) {
+  const banked = state.totals[side][player]
+  const mine = state.visits.filter((v) => v.side === side && v.player === player)
+  return {
+    scored: banked.scored + mine.reduce((sum, v) => sum + v.score, 0),
+    visits: banked.visits + mine.length,
+  }
+}
+
+// Three-dart average per visit since the last reset. Busts count as zero.
+export function averageOf(state, side, player) {
+  const { scored, visits } = totalsOf(state, side, player)
+  return visits === 0 ? 0 : scored / visits
 }
 
 // Who throws next. Sides alternate every visit; in pairs the two partners
@@ -128,6 +144,9 @@ export function x01Reducer(state, action) {
         legs: state.legs.map((n, side) => n + (side === winner ? 1 : 0)),
         leg: state.leg + 1,
         visits: [],
+        totals: state.totals.map((pair, side) =>
+          pair.map((_, player) => totalsOf(state, side, player)),
+        ),
         winModalOpen: false,
       }
     }
