@@ -1,27 +1,39 @@
 import { useEffect, useReducer, useState } from 'react'
 import Scoreboard from './components/Scoreboard.jsx'
+import X01Board from './components/X01Board.jsx'
 import WinModal from './components/WinModal.jsx'
 import ResetConfirm from './components/ResetConfirm.jsx'
-import { MAX_PLAYERS, createGame, loadNames, reducer, saveNames } from './game.js'
+import { MAX_PLAYERS } from './game.js'
+import { MODES, loadState, reducer, saveState } from './store.js'
 import { playClick } from './sound.js'
 
+const MODE_LABELS = { francesinha: 'Francesinha', 501: '501' }
+
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, undefined, () => createGame(loadNames()))
+  const [state, dispatch] = useReducer(reducer, undefined, loadState)
   const [confirmingReset, setConfirmingReset] = useState(false)
   const [sound, setSound] = useState(false)
 
-  const { players, winner, history } = state
-  const full = players.length >= MAX_PLAYERS
-
-  const names = players.map((p) => p.name).join('\n')
+  // Every change is saved, so a reload or a closed tab resumes both games.
   useEffect(() => {
-    saveNames(names.split('\n'))
-  }, [names])
+    saveState(state)
+  }, [state])
+
+  const { mode, fr, x01 } = state
+  const { players } = fr
+  const is501 = mode === '501'
+  const full = players.length >= MAX_PLAYERS
+  const canUndo = (is501 ? x01.history : fr.history).length > 0
+
+  const rename = (index, name) => dispatch({ type: 'rename', index, name })
+  const remove = (index) => dispatch({ type: 'removePlayer', index })
 
   const tap = (player, row) => {
     if (sound) playClick(false)
     dispatch({ type: 'tap', player, row })
   }
+
+  const x01Winner = players.find((p) => p.id === x01.winnerId)
 
   return (
     <div className="flex h-dvh min-h-[440px] flex-col">
@@ -29,6 +41,25 @@ export default function App() {
         <h1 className="text-3xl font-extrabold uppercase tracking-[0.2em] text-copper">
           Francesinha
         </h1>
+
+        <div className="flex rounded-xl border border-copper/55 bg-black/30 p-1" role="group" aria-label="Game">
+          {MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => {
+                setConfirmingReset(false)
+                dispatch({ type: 'setMode', mode: m })
+              }}
+              className={`min-h-10 rounded-lg px-4 text-base font-bold uppercase tracking-widest transition-colors ${
+                mode === m ? 'bg-copper text-bar' : 'text-cream/70'
+              }`}
+            >
+              {MODE_LABELS[m]}
+            </button>
+          ))}
+        </div>
 
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <button
@@ -42,8 +73,8 @@ export default function App() {
           <button
             type="button"
             className="btn"
-            onClick={() => dispatch({ type: 'undo' })}
-            disabled={history.length === 0}
+            onClick={() => dispatch({ type: is501 ? 'x01/undo' : 'undo' })}
+            disabled={!canUndo}
           >
             Undo
           </button>
@@ -74,8 +105,9 @@ export default function App() {
             </button>
             {confirmingReset && (
               <ResetConfirm
+                question={is501 ? 'Reset the 501 match?' : 'Reset the board?'}
                 onConfirm={() => {
-                  dispatch({ type: 'reset' })
+                  dispatch({ type: is501 ? 'x01/reset' : 'reset' })
                   setConfirmingReset(false)
                 }}
                 onCancel={() => setConfirmingReset(false)}
@@ -86,24 +118,48 @@ export default function App() {
       </header>
 
       <main className="px-safe min-h-0 flex-1 pt-2">
-        <Scoreboard
-          players={players}
-          onRename={(index, name) => dispatch({ type: 'rename', index, name })}
-          onTap={tap}
-          onRemove={(index) => dispatch({ type: 'removePlayer', index })}
-        />
+        {is501 ? (
+          <X01Board
+            players={players}
+            x01={x01}
+            onScore={(value, bust) => {
+              if (sound) playClick(bust)
+              dispatch({ type: 'x01/score', value })
+            }}
+            onBust={() => {
+              if (sound) playClick(true)
+              dispatch({ type: 'x01/bust' })
+            }}
+            onNextLeg={() => dispatch({ type: 'x01/nextLeg' })}
+            onRename={rename}
+            onRemove={remove}
+          />
+        ) : (
+          <Scoreboard players={players} onRename={rename} onTap={tap} onRemove={remove} />
+        )}
       </main>
 
       <p className="pb-safe px-3 pt-2 text-center text-sm tracking-widest text-cream/45">
-        Tap a wire to add a mark · Join on this network:{' '}
+        {is501 ? '501 · straight in, double out' : 'Tap a wire to add a mark'} · Join on this network:{' '}
         <span className="select-text text-cream/70">{window.location.origin}{window.location.pathname.replace(/\/$/, '')}</span>
       </p>
 
-      {winner !== null && (
+      {!is501 && fr.winner !== null && (
         <WinModal
-          name={players[winner].name}
-          onNewGame={() => dispatch({ type: 'newGame' })}
+          eyebrow="Board closed"
+          title={`${players[fr.winner].name} closed the francesinha`}
+          primaryLabel="New game"
+          onPrimary={() => dispatch({ type: 'newGame' })}
           onDismiss={() => dispatch({ type: 'dismissWin' })}
+        />
+      )}
+      {is501 && x01Winner && x01.winModalOpen && (
+        <WinModal
+          eyebrow="Game shot"
+          title={`${x01Winner.name} checked out`}
+          primaryLabel="Next leg"
+          onPrimary={() => dispatch({ type: 'x01/nextLeg' })}
+          onDismiss={() => dispatch({ type: 'x01/dismissWin' })}
         />
       )}
     </div>

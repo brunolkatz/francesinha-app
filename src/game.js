@@ -117,30 +117,3 @@ export function reducer(state, action) {
       return state
   }
 }
-
-const STORAGE_KEY = 'francesinha.players'
-
-export function loadNames() {
-  try {
-    const names = JSON.parse(localStorage.getItem(STORAGE_KEY))
-    if (
-      Array.isArray(names) &&
-      names.length >= 1 &&
-      names.length <= MAX_PLAYERS &&
-      names.every((n) => typeof n === 'string' && n.trim())
-    ) {
-      return names.map((n) => n.trim().slice(0, NAME_MAX))
-    }
-  } catch {
-    // Storage unavailable or corrupt: fall through to a fresh table.
-  }
-  return undefined
-}
-
-export function saveNames(names) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(names))
-  } catch {
-    // Private mode or full storage: the game still works without persistence.
-  }
-}

@@ -1,5 +1,5 @@
 // Small inline confirm anchored under the Reset button.
-export default function ResetConfirm({ onConfirm, onCancel }) {
+export default function ResetConfirm({ question, onConfirm, onCancel }) {
   return (
     <div
       className="absolute right-0 top-full z-40 mt-2 w-64 rounded-xl border border-copper/60 bg-walnut p-3 shadow-2xl"
@@ -7,7 +7,7 @@ export default function ResetConfirm({ onConfirm, onCancel }) {
       aria-labelledby="reset-title"
     >
       <p id="reset-title" className="mb-3 text-center text-xl font-bold tracking-wider">
-        Reset the board?
+        {question}
       </p>
       <div className="flex gap-2">
         <button type="button" className="btn btn-danger flex-1" onClick={onConfirm}>
