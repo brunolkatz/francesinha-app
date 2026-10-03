@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import BeadWire from './BeadWire.jsx'
 import { ROWS, closedCount } from '../game.js'
 
-const GRID = 'grid grid-cols-[minmax(0,1fr)] grid-rows-[2.75rem_repeat(9,minmax(0,1fr))_2.75rem]'
+const GRID = 'grid grid-cols-[minmax(0,1fr)] grid-rows-[2.75rem_repeat(9,minmax(0,1fr))_3.5rem]'
 
 function PlayerName({ name, active, onRename }) {
   const [draft, setDraft] = useState(null)
@@ -66,7 +66,7 @@ function ColumnFooter({ player, done, canRemove, onRemove }) {
           onClick={onRemove}
           onBlur={() => setArmed(false)}
           autoFocus
-          className="h-9 w-full rounded-md bg-[#a5392c] text-sm font-bold uppercase tracking-wide text-cream"
+          className="h-9 w-full rounded-lg bg-[#a5392c] text-sm font-bold uppercase tracking-wide text-cream sm:h-11 sm:text-base"
         >
           Remove?
         </button>
@@ -78,7 +78,7 @@ function ColumnFooter({ player, done, canRemove, onRemove }) {
     <div className="flex items-center justify-center">
       <span
         className={`min-w-0 flex-1 text-center text-sm font-semibold tracking-widest ${
-          canRemove ? 'pl-2 sm:pl-10' : ''
+          canRemove ? 'pl-1 sm:pl-12' : ''
         } ${
           done ? 'text-brass' : 'text-cream/50'
         }`}
@@ -90,7 +90,7 @@ function ColumnFooter({ player, done, canRemove, onRemove }) {
           type="button"
           onClick={() => setArmed(true)}
           aria-label={`Remove ${player.name}`}
-          className="flex h-full w-10 shrink-0 items-center justify-center text-2xl leading-none text-cream/40 active:text-cream"
+          className="mr-1 flex size-9 shrink-0 items-center justify-center rounded-lg bg-neutral-600 text-2xl font-bold leading-none text-cream active:bg-neutral-400 sm:mr-1.5 sm:size-11 sm:text-3xl"
         >
           ×
         </button>
